@@ -1,0 +1,51 @@
+#!/bin/sh
+# run_edcmp
+# Yong zhou
+# 2017-08-21
+
+for ((dip=0;dip<=90;dip=dip+5))
+do
+
+s_stk=-13.9
+s_ind=44.0
+
+strike=153 # in degree
+#dip=5      # in degree
+rake=-18   # in degree
+dep=14     # in km
+length=22  # in km
+width=10   # in km
+slip=0.86  # in meter
+
+oup=dip$dip
+
+inp=tmp.inp
+dsp=tmp.disp
+
+echo refcor $dep $length $width $strike $dip
+xyz=`refcor $dep $length $width $strike $dip `
+x=`echo $xyz | gawk '{print $1}'`
+y=`echo $xyz | gawk '{print $2}'`
+z=`echo $xyz | gawk '{print $3}'`
+
+echo 2 > $inp
+echo 201 -100000 100000 >> $inp
+echo 201 -100000 100000 >> $inp
+echo \'./\'        >> $inp
+echo 1 0 0 0     >> $inp
+echo $dsp 'tmp.strn' 'tmp.strss' 'tmp.tilt'       >> $inp
+echo 1           >> $inp
+echo 1 $slip $x $y $z $length $width $strike $dip $rake | gawk '{print $1,$2,$3*1000,$4*1000,$5*1000,$6*1000,$7*1000,$8,$9,$10}' >> $inp
+echo 0           >> $inp
+echo 0 2.8224e+10 3.6288e+10 >> $inp
+
+edcmp $inp
+
+matlab -nosplash -nodesktop <<EOF
+los_dsp=plot_disp('$dsp','$oup',$s_stk,$s_ind,$strike,$dip,$length,$width,$dep);
+%los_dsp=plot_disp('jiuzhaigou_np1_2.disp','$oup',$s_stk,$s_ind,$strike,$dip,$length,$width);
+plot_ss_section(los_dsp,'$oup',$strike,$dip,$length,$width,$dep);
+exit
+EOF
+
+done
